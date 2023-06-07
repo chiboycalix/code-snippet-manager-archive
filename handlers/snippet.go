@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -41,9 +40,24 @@ func GetAllSnippets(c *fiber.Ctx) error {
 	if err := cursor.All(ctx, &snippets); err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
-	fmt.Println(snippets)
 	// Return success response
-	return responses.SuccessResponse(c, http.StatusOK, "snippets", snippets)
+	// return responses.SuccessResponse(c, http.StatusOK, "snippets", snippets)
+
+	generatedCodeSnippet := `package main
+
+	import "fmt"
+	
+	func main() {
+			fmt.Println("Hello, World!")
+	}`
+
+	codeHTML := "<pre><code>" + generatedCodeSnippet + "</code></pre>"
+
+	return c.Render("snippets", fiber.Map{
+		"PageTitle": "My snippets",
+		"Snippets":  snippets,
+		"Template":  codeHTML,
+	})
 }
 
 func GetSnippet(c *fiber.Ctx) error {
@@ -86,9 +100,11 @@ func CreateSnippet(c *fiber.Ctx) error {
 	}
 
 	snippet = models.Snippet{
-		ID:       primitive.NewObjectID(),
-		Snippet:  snippet.Snippet,
-		Language: snippet.Language,
+		ID:          primitive.NewObjectID(),
+		Snippet:     snippet.Snippet,
+		Language:    snippet.Language,
+		Title:       snippet.Title,
+		Description: snippet.Description,
 	}
 
 	// Insert new snippet into database
@@ -123,7 +139,7 @@ func UpdateSnippet(c *fiber.Ctx) error {
 	}
 
 	// Update snippet in database
-	update := bson.M{"snippet": snippet.Snippet, "language": snippet.Language}
+	update := bson.M{"snippet": snippet.Snippet, "language": snippet.Language, "title": snippet.Title, "description": snippet.Description}
 	updatedSnippet, err := snippetCollection.UpdateOne(ctx, bson.M{"_id": objId}, bson.M{"$set": update})
 
 	// Check if there was an error updating snippet
