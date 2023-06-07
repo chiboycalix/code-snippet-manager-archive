@@ -43,20 +43,9 @@ func GetAllSnippets(c *fiber.Ctx) error {
 	// Return success response
 	// return responses.SuccessResponse(c, http.StatusOK, "snippets", snippets)
 
-	generatedCodeSnippet := `package main
-
-	import "fmt"
-	
-	func main() {
-			fmt.Println("Hello, World!")
-	}`
-
-	codeHTML := "<pre><code>" + generatedCodeSnippet + "</code></pre>"
-
 	return c.Render("snippets", fiber.Map{
 		"PageTitle": "My snippets",
 		"Snippets":  snippets,
-		"Template":  codeHTML,
 	})
 }
 

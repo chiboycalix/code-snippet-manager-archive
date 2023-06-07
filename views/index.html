@@ -1,1 +1,12 @@
-<p>home page</p>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+  <head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/styles/{{.Theme}}.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+    <title>Syntax Highlighting from Markdown with Chroma</title>
+  </head>
+  <body>
+    <div>{{ .MarkdownHTML }}</div>
+  </body>
+</html>
