@@ -1,12 +1,112 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<html>
   <head>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/styles/{{.Theme}}.min.css">
+    <meta charset="UTF-8" />
+    <title>Code Snippet Manager</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/styles/{{.Theme}}.min.css"
+    />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/highlight.min.js"></script>
-    <script>hljs.highlightAll();</script>
-    <title>Syntax Highlighting from Markdown with Chroma</title>
+    <script>
+      hljs.highlightAll();
+    </script>
+    <style>
+      @import url("https://fonts.googleapis.com/css?family=Roboto:300,400,500,700,900");
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        width: 100vw;
+        font-family: "Roboto", sans-serif;
+        background-color: #212020;
+        color: #fff;
+      }
+      .container {
+        width: 1400px;
+        margin: 0 auto;
+      }
+      .title {
+        font-size: 3rem;
+        margin: 40px 0;
+        text-align: center;
+      }
+      .language{
+        margin-bottom: 7px;
+        text-transform: capitalize;
+      }
+      .snippetsWrapper {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+      }
+      .snippet {
+        width: 450px;
+      }
+      
+      pre {
+        word-wrap: normal;
+        min-height: 100px;
+        max-height: 200px;
+        overflow: auto;
+        border-radius: 4px;
+        height: 100%;
+      }
+
+      code {
+        border-radius: 4px;
+      }
+    </style>
   </head>
   <body>
-    <div>{{ .MarkdownHTML }}</div>
+    <div class="container">
+      <h1 class="title">Code Snippet Manager</h1>
+      <!-- 
+    <form method="POST" action="/save">
+      <label for="name">Name:</label>
+      <input type="text" id="name" name="name" required><br>
+
+      <label for="code">Code:</label>
+      <textarea id="code" name="code" required></textarea><br>
+
+      <input type="submit" value="Save">
+  </form> -->
+<div>
+
+
+      <div class="snippetsWrapper">
+        {{range .Snippets}}
+        <div class="snippet">
+          <p class="language">{{  .Language }}</p>
+          <pre><code class="language-{{.Language}}">
+pub enum State {
+    Start,
+    Transient,
+    Closed,
+}
+
+impl From<&'a str> for State {
+    fn from(s: &'a str) -> Self {
+        match s {
+            "start" => State::Start,
+            "closed" => State::Closed,
+            _ => unreachable!(),
+        }
+    }
+}
+          </code></pre>
+        </div>
+        {{end}}
+      </div>
+    </div>
+  </div>
   </body>
 </html>

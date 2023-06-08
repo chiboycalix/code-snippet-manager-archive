@@ -1,58 +1,147 @@
 package main
 
 import (
-	"html/template"
-	"io/ioutil"
+	"bytes"
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"os/exec"
+	"time"
 
-	"github.com/chiboycalix/code-snippet-manager/configs"
-	"github.com/chiboycalix/code-snippet-manager/handlers"
-	"github.com/chiboycalix/code-snippet-manager/routes"
-	"github.com/chiboycalix/code-snippet-manager/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html"
-	"github.com/russross/blackfriday/v2"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+type Snippet struct {
+	ID          primitive.ObjectID `json:"_id" bson:"_id,omitempty"`
+	Snippet     string             `json:"snippet" validate:"required"`
+	Language    string             `json:"language" validate:"required"`
+	Title       string             `json:"title" validate:"required"`
+	Description string             `json:"description" validate:"required"`
+	Theme       string             `json:"theme" validate:"required"`
+}
+
+var (
+	db         *mongo.Database
+	collection *mongo.Collection
 )
 
 func main() {
 
-	// Views
 	engine := html.New("./views", ".html")
 
 	app := fiber.New(fiber.Config{
-		Views:       engine,
-		ViewsLayout: "layouts/main",
+		Views: engine,
+		// ViewsLayout: "layouts/main",
 		// EnablePrintRoutes: true,
 	})
-	type TemplateData struct {
-		MarkdownHTML template.HTML
-		Theme        string
-	}
-	app.Get("/", func(c *fiber.Ctx) error {
-		filePath := "./README.md"
-		markdown, err := ioutil.ReadFile(filePath)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
-		}
-
-		renderer := blackfriday.NewHTMLRenderer(blackfriday.HTMLRendererParameters{})
-		html := blackfriday.Run([]byte(markdown), blackfriday.WithRenderer(renderer))
-
-		data := TemplateData{
-			MarkdownHTML: template.HTML(html),
-			Theme:        "monokai",
-		}
-
-		return c.Render("index", data)
-	})
-
-	app.Get("/snippets", handlers.GetAllSnippets)
-
 	app.Static("/", "./public", fiber.Static{})
-	utils.FormatCode()
-	// run database
-	configs.ConnectDatabase()
+	// Connect to MongoDB
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017/code_snippet_manager"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	err = client.Connect(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	routes.SnippetRoute(app)
+	db = client.Database("code_snippet_manager")
+	collection = db.Collection("snippets")
 
+	err = client.Ping(ctx, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Connected to MongoDB!")
+
+	// Define routes
+	app.Get("/", indexHandler)
+	app.Get("/snippets", snippetsHandler)
+	app.Post("/save", saveSnippetHandler)
+
+	// Start the server
+	fmt.Println("Server started on http://localhost:3000")
 	app.Listen(":3000")
+}
+
+func indexHandler(c *fiber.Ctx) error {
+	snippets := getAllSnippets()
+	return c.Render("index", fiber.Map{
+		"Snippets": snippets,
+		"Theme":    "androidstudio",
+	})
+}
+
+func snippetsHandler(c *fiber.Ctx) error {
+	snippets := getAllSnippets()
+	fmt.Println(snippets)
+	return c.JSON(snippets)
+}
+
+func saveSnippetHandler(c *fiber.Ctx) error {
+	snippet := new(Snippet)
+	if err := c.BodyParser(snippet); err != nil {
+		return fiber.NewError(http.StatusBadRequest, "Invalid request")
+	}
+
+	if snippet.Description == "" || snippet.Snippet == "" {
+		return fiber.NewError(http.StatusBadRequest, "Name and code are required")
+	}
+
+	formattedCode, e := formatCode(snippet.Snippet)
+	if e != nil {
+		fmt.Println(e)
+	}
+
+	snippet.Snippet = formattedCode
+
+	_, err := collection.InsertOne(context.Background(), snippet)
+	if err != nil {
+		return fiber.NewError(http.StatusInternalServerError, "Failed to save snippet")
+	}
+
+	return c.Redirect("/")
+}
+
+func getAllSnippets() []Snippet {
+	cursor, err := collection.Find(context.Background(), bson.D{{}})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cursor.Close(context.Background())
+
+	var snippets []Snippet
+
+	for cursor.Next(context.Background()) {
+		var snippet Snippet
+		err := cursor.Decode(&snippet)
+		if err != nil {
+			log.Fatal(err)
+		}
+		snippets = append(snippets, snippet)
+	}
+
+	return snippets
+}
+func formatCode(code string) (string, error) {
+	cmd := exec.Command("npx", "prettier", "--parser", "babel")
+	cmd.Stdin = bytes.NewBufferString(code)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	err := cmd.Run()
+	if err != nil {
+		log.Println("Error formatting code:", err)
+		return "", err
+	}
+
+	return out.String(), nil
 }
