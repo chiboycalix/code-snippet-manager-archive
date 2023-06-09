@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log"
 	"net/http"
-	"os/exec"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -65,7 +63,7 @@ func main() {
 	// Define routes
 	app.Get("/", indexHandler)
 	app.Get("/snippets", snippetsHandler)
-	app.Post("/save", saveSnippetHandler)
+	app.Post("/snippets", saveSnippetHandler)
 
 	// Start the server
 	fmt.Println("Server started on http://localhost:4000")
@@ -96,13 +94,6 @@ func saveSnippetHandler(c *fiber.Ctx) error {
 		return fiber.NewError(http.StatusBadRequest, "Name and code are required")
 	}
 
-	formattedCode, e := formatCode(snippet.Snippet)
-	if e != nil {
-		fmt.Println(e)
-	}
-
-	snippet.Snippet = formattedCode
-
 	_, err := collection.InsertOne(context.Background(), snippet)
 	if err != nil {
 		return fiber.NewError(http.StatusInternalServerError, "Failed to save snippet")
@@ -130,18 +121,4 @@ func getAllSnippets() []Snippet {
 	}
 
 	return snippets
-}
-func formatCode(code string) (string, error) {
-	cmd := exec.Command("npx", "prettier", "--parser", "babel")
-	cmd.Stdin = bytes.NewBufferString(code)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-
-	err := cmd.Run()
-	if err != nil {
-		log.Println("Error formatting code:", err)
-		return "", err
-	}
-
-	return out.String(), nil
 }
