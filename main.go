@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html"
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -39,8 +41,15 @@ func main() {
 		// EnablePrintRoutes: true,
 	})
 	app.Static("/", "./public", fiber.Static{})
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	connectionString := os.Getenv("MONGO_URI")
+	port := os.Getenv("PORT")
 	// Connect to MongoDB
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017/code_snippet_manager"))
+	client, err := mongo.NewClient(options.Client().ApplyURI(connectionString))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -67,7 +76,7 @@ func main() {
 
 	// Start the server
 	fmt.Println("Server started on http://localhost:4000")
-	app.Listen(":4000")
+	log.Fatal(app.Listen("0.0.0.0:" + port))
 }
 
 func indexHandler(c *fiber.Ctx) error {
