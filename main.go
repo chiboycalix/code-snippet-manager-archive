@@ -47,7 +47,7 @@ func main() {
 	}
 
 	connectionString := os.Getenv("MONGO_URI")
-	port := os.Getenv("PORT")
+	var port = envPortOr("3000")
 	// Connect to MongoDB
 	client, err := mongo.NewClient(options.Client().ApplyURI(connectionString))
 	if err != nil {
@@ -76,7 +76,7 @@ func main() {
 
 	// Start the server
 	fmt.Println("Server started on http://localhost:4000")
-	log.Fatal(app.Listen("0.0.0.0:" + port))
+	log.Fatal(app.Listen("0.0.0.0" + port))
 }
 
 func indexHandler(c *fiber.Ctx) error {
@@ -130,4 +130,13 @@ func getAllSnippets() []Snippet {
 	}
 
 	return snippets
+}
+
+func envPortOr(port string) string {
+	// If `PORT` variable in environment exists, return it
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		return ":" + envPort
+	}
+	// Otherwise, return the value of `port` variable from function argument
+	return ":" + port
 }
