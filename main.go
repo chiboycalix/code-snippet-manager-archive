@@ -68,8 +68,8 @@ func main() {
 	app.Post("/save", saveSnippetHandler)
 
 	// Start the server
-	fmt.Println("Server started on http://localhost:3000")
-	app.Listen(":3000")
+	fmt.Println("Server started on http://localhost:4000")
+	app.Listen(":4000")
 }
 
 func indexHandler(c *fiber.Ctx) error {
